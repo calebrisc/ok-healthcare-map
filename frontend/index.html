@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oklahoma Healthcare Access Map</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="loading-pulse"></div>
+        <div class="loading-text">Loading healthcare data</div>
+    </div>
+    <div id="sidebar">
+        <button id="sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
+        <div id="sidebar-header">
+            <h1>OK Healthcare Access</h1>
+            <div id="sidebar-tabs">
+                <button class="tab-btn active" data-tab="filters">Filters</button>
+                <button class="tab-btn" data-tab="details">Details</button>
+                <button class="tab-btn" data-tab="county">County</button>
+                <button class="tab-btn" data-tab="networks">Networks</button>
+                <button class="tab-btn" data-tab="tribal" style="display:none">Tribal</button>
+            </div>
+        </div>
+
+        <div id="tab-filters" class="tab-content active">
+            <div class="hpsa-group">
+                <label class="section-label">Geographic HPSAs <span class="toggle-hint">— area has no providers</span></label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-geo-pc" checked />
+                    <span class="toggle-swatch swatch-geographic"></span>
+                    Primary Care
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-geo-dental" />
+                    <span class="toggle-swatch swatch-geographic"></span>
+                    Dental Health
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-geo-mh" />
+                    <span class="toggle-swatch swatch-geographic"></span>
+                    Mental Health
+                </label>
+            </div>
+
+            <div class="hpsa-group">
+                <label class="section-label">Population HPSAs <span class="toggle-hint">— low-income can't access care</span></label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-pop-pc" checked />
+                    <span class="toggle-swatch swatch-population"></span>
+                    Primary Care
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-pop-dental" />
+                    <span class="toggle-swatch swatch-population"></span>
+                    Dental Health
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-pop-mh" />
+                    <span class="toggle-swatch swatch-population"></span>
+                    Mental Health
+                </label>
+            </div>
+
+            <div class="hpsa-group">
+                <label class="section-label">Facility HPSAs <span class="toggle-hint">— clinic is short-staffed</span></label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-fac-pc" checked />
+                    <span class="toggle-swatch swatch-facility"></span>
+                    Primary Care
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-fac-dental" checked />
+                    <span class="toggle-swatch swatch-facility"></span>
+                    Dental Health
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-fac-mh" checked />
+                    <span class="toggle-swatch swatch-facility"></span>
+                    Mental Health
+                </label>
+            </div>
+
+            <div id="overlay-controls">
+                <label class="section-label">Overlays</label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-mua" />
+                    <span class="toggle-swatch" style="background:rgba(234,179,8,0.3);border:1px solid rgba(234,179,8,0.5);border-radius:3px"></span>
+                    MUA/MUP <span class="toggle-hint">— underserved areas (loan repayment)</span>
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-nhsc" />
+                    <span class="toggle-swatch" style="background:#eab308;border-radius:50%"></span>
+                    NHSC Sites <span class="toggle-hint">— $50k-$75k loan forgiveness</span>
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-tribal" /> Tribal Boundaries
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="toggle-providers" /> NPI Providers <span class="toggle-hint">— zoom in to see</span>
+                </label>
+                <div id="provider-filter" class="hidden">
+                    <select id="provider-category">
+                        <option value="primary_care">Primary Care</option>
+                        <option value="np_pa">NP / PA</option>
+                        <option value="specialists">Specialists</option>
+                        <option value="hospitals">Hospitals / FQHCs</option>
+                        <option value="behavioral">Behavioral Health</option>
+                        <option value="dental">Dental</option>
+                        <option value="pharmacy">Pharmacy</option>
+                        <option value="therapy">Therapy</option>
+                        <option value="facilities">Facilities</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="view-controls">
+                <label class="section-label">Data Layers</label>
+                <div id="view-selector">
+                    <button class="view-btn" data-view="demographics">Demographics</button>
+                    <button class="view-btn" data-view="insurance">Insurance & Income</button>
+                    <button class="view-btn" data-view="disease">Disease Burden</button>
+                    <button class="view-btn" data-view="market">Market Intel</button>
+        <button class="view-btn" data-view="soonercare">SoonerCare</button>
+                </div>
+                <div id="metric-controls" class="hidden">
+                    <select id="metric-select"></select>
+                    <button id="clear-data-layer" class="clear-btn">Clear</button>
+                </div>
+            </div>
+
+            <div id="legend">
+                <label class="section-label">Legend</label>
+                <div id="legend-content">
+                    <div class="legend-row">
+                        <span class="legend-label">HPSA Score</span>
+                        <div class="legend-scale">
+                            <span class="legend-chip" style="background:#f59e0b">1-9</span>
+                            <span class="legend-chip" style="background:#f97316">10-14</span>
+                            <span class="legend-chip" style="background:#ef4444">15-19</span>
+                            <span class="legend-chip" style="background:#dc2626;color:#fff">20-26</span>
+                        </div>
+                    </div>
+                    <div class="legend-row" style="margin-top:8px">
+                        <span class="legend-label">Facilities</span>
+                        <div class="legend-scale">
+                            <span class="legend-chip" style="background:#ef4444">Hospital</span>
+                            <span class="legend-chip" style="background:#22c55e">FQHC</span>
+                            <span class="legend-chip" style="background:#14b8a6">RHC</span>
+                            <span class="legend-chip" style="background:#a855f7;color:#fff">IHS</span>
+                            <span class="legend-chip" style="background:#06b6d4">Pharmacy</span>
+                            <span class="legend-chip" style="background:#666;color:#fff">Closed</span>
+                        </div>
+                    </div>
+                    <div class="legend-row" style="margin-top:8px">
+                        <span class="legend-label">Overlays</span>
+                        <div class="legend-scale">
+                            <span class="legend-chip" style="background:rgba(234,179,8,0.3);border:1px solid rgba(234,179,8,0.5);color:#eab308">MUA/MUP</span>
+                            <span class="legend-chip" style="background:#eab308;border:2px solid #fcd34d">NHSC</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-details" class="tab-content">
+            <div id="detail-content">
+                <p class="placeholder">Select a county or HPSA area to explore shortage designations</p>
+            </div>
+        </div>
+
+        <div id="tab-county" class="tab-content">
+            <div id="county-content">
+                <p class="placeholder">Select a county to see population, income, and health data</p>
+            </div>
+        </div>
+
+        <div id="tab-networks" class="tab-content">
+            <div id="networks-content">
+                <p class="placeholder">Select a county to compare insurer networks by provider type</p>
+            </div>
+        </div>
+
+        <div id="tab-tribal" class="tab-content">
+            <div id="tribal-content">
+                <p class="placeholder">Select a county to see overlapping tribal jurisdictions</p>
+            </div>
+        </div>
+    </div>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/map.js"></script>
+</body>
+</html>
