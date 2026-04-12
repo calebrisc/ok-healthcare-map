@@ -1,6 +1,5 @@
-# Data files (too large for git)
+# Raw data (downloaded from APIs, can be regenerated via ETL scripts)
 data/raw/
-data/processed/
 *.shp
 *.shx
 *.dbf
